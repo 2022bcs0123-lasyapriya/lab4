@@ -1,41 +1,29 @@
-import os
-import json
-import joblib
+# train.py - corrected version
 import pandas as pd
-from sklearn.datasets import load_wine
+import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score
+from sklearn.ensemble import RandomForestClassifier  # or Regressor
+from sklearn.metrics import f1_score, accuracy_score
 
-# Load dataset
-data = load_wine()
-X = pd.DataFrame(data.data, columns=data.feature_names)
-y = data.target
+# Option 1: use local file
+df = pd.read_csv("winequality-red.csv", sep=";")   # or winequality-white.csv
+# or Option 2: download from UCI
+# url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+# df = pd.read_csv(url, sep=";")
 
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+X = df.drop("quality", axis=1)
+y = df["quality"]
 
-# Train model
+# Optional: make it binary classification (common in tutorials)
+# y = (y >= 6).astype(int)   # good vs bad
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# Evaluate
 y_pred = model.predict(X_test)
-f1 = f1_score(y_test, y_pred, average="weighted")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+# or print("F1:", f1_score(y_test, y_pred, average="weighted"))
 
-# Save model
-os.makedirs("model", exist_ok=True)
 joblib.dump(model, "model/model.pkl")
-
-# Save metrics
-metrics = {
-    "f1": round(float(f1), 4)
-}
-
-with open("metrics.json", "w") as f:
-    json.dump(metrics, f)
-
-print("Training completed successfully")
-print("F1 Score:", metrics["f1"])
