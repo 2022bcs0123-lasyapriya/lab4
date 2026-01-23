@@ -9,19 +9,9 @@ model = joblib.load("model/model.pkl")
 
 # Wine dataset has 13 features — fixed order
 FEATURE_ORDER = [
-    "alcohol",
-    "malic_acid",
-    "ash",
-    "alcalinity_of_ash",
-    "magnesium",
-    "total_phenols",
-    "flavanoids",
-    "nonflavanoid_phenols",
-    "proanthocyanins",
-    "color_intensity",
-    "hue",
-    "od280/od315_of_diluted_wines",
-    "proline"
+    "fixed acidity", "volatile acidity", "citric acid", "residual sugar",
+    "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density",
+    "pH", "sulphates", "alcohol"
 ]
 
 @app.post("/predict")
