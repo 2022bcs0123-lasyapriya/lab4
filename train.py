@@ -6,7 +6,7 @@ import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 
 # Load dataset
 df = pd.read_csv("winequality.csv", sep=";")
@@ -26,6 +26,7 @@ model.fit(X_train, y_train)
 # Evaluation
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred, average="weighted")
 
 # Ensure directories exist
 os.makedirs("model", exist_ok=True)
@@ -36,7 +37,8 @@ joblib.dump(model, "model/model.pkl")
 
 # Save metrics for Jenkins
 metrics = {
-    "accuracy": float(accuracy)
+    "accuracy": float(accuracy),
+    "f1": float(f1)
 }
 
 os.makedirs("artifacts", exist_ok=True)
