@@ -2,41 +2,94 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "lasyabagadi/lab5-jenkins"
+        DOCKER_IMAGE = "lasyabagadi/lab4-app"
     }
 
     stages {
 
-        stage('Build Docker Image') {
+        stage('Checkout') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                checkout scm
             }
         }
 
-        stage('Train and Evaluate Model') {
+        stage('Setup Python') {
             steps {
                 sh '''
-                echo "Name: Bagadi Lasya Priya"
-                echo "Roll No: 2022BCS0123"
-                docker run $DOCKER_IMAGE python train.py
+                python3 -m venv .venv
+                . .venv/bin/activate
+                pip install -r requirements.txt
                 '''
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Train Model') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                sh '''
+                . .venv/bin/activate
+                python train.py
+                '''
+            }
+        }
 
+        stage('Read Accuracy') {
+            steps {
+                script {
+                    env.CURRENT_ACCURACY = sh(
+                        script: "jq .accuracy artifacts/metrics.json",
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+
+        stage('Compare Accuracy') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'best-accuracy', variable: 'BEST')]) {
+                        if (env.CURRENT_ACCURACY.toFloat() > BEST.toFloat()) {
+                            env.IS_BETTER = "1"
+                        } else {
+                            env.IS_BETTER = "0"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            when {
+                expression { env.IS_BETTER == "1" }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                usernameVariable: 'USER',
+                                passwordVariable: 'PASS')]) {
                     sh '''
-                    docker login -u $DOCKER_USER -p $DOCKER_PASS
-                    docker push $DOCKER_IMAGE
+                    echo $PASS | docker login -u $USER --password-stdin
+                    docker build -t $DOCKER_IMAGE:${BUILD_NUMBER} .
+                    docker tag $DOCKER_IMAGE:${BUILD_NUMBER} $DOCKER_IMAGE:latest
                     '''
                 }
             }
+        }
+
+        stage('Push Docker Image') {
+            when {
+                expression { env.IS_BETTER == "1" }
+            }
+            steps {
+                sh '''
+                docker push $DOCKER_IMAGE:${BUILD_NUMBER}
+                docker push $DOCKER_IMAGE:latest
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'artifacts/**', fingerprint: true
         }
     }
 }
