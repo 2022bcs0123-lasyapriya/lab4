@@ -39,7 +39,7 @@ metrics = {
     "accuracy": float(accuracy)
 }
 
-os.makedir("artifacts", exist_ok=True)
+os.makedirs("artifacts", exist_ok=True)
 with open("artifacts/metrics.json", "w") as f:
     json.dump(metrics, f)
 
