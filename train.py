@@ -39,7 +39,11 @@ metrics = {
     "accuracy": float(accuracy)
 }
 
+os.makedir("artifacts", exist_ok=True)
 with open("artifacts/metrics.json", "w") as f:
+    json.dump(metrics, f)
+
+with open("metrics.json", "w") as f:
     json.dump(metrics, f)
 
 # Lab requirement print
