@@ -27,7 +27,8 @@ def predict(data: dict):
         return {
             "name": "Bagadi Lasya Priya",
             "roll_no": "2022BCS0123",
-            "wine_quality": int(prediction)
+            # "wine_quality": int(prediction)
+            "quality": int(prediction)
         }
     except KeyError as e:
         return {"error": f"Missing feature: {str(e)}"}
