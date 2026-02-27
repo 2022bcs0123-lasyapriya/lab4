@@ -33,7 +33,7 @@ pipeline {
                     timeout(time: 60, unit: 'SECONDS') {
                         waitUntil {
                             def status = sh(
-                                script: "curl -s http://localhost:8000/health",
+                                script: "curl -s http://lab7_test_container:8000/health",
                                 returnStatus: true
                             )
                             return (status == 0)
