@@ -71,7 +71,7 @@ jobs:
         docker push ${{ secrets.DOCKER_USERNAME }}/wine-inference:latest
 
     - name: Update BEST_F1
-      run: |
-        gh variable set BEST_F1 --body "$F1"
       env:
-        GH_TOKEN: ${{ secrets.GH_PAT }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh variable set BEST_F1 --body "$F1" --repo ${{ github.repository }}
