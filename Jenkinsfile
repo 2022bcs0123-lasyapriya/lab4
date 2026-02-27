@@ -2,94 +2,88 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "lasyabagadi/lab4-app"
+        IMAGE_NAME = "lasyabagadi/lab4-app:latest"
+        CONTAINER_NAME = "lab7_test_container"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Pull Image') {
             steps {
-                checkout scm
+                sh 'docker pull $IMAGE_NAME'
             }
         }
 
-        stage('Setup Python') {
+        stage('Run Container') {
             steps {
-                sh '''
-                python3 -m venv .venv
-                . .venv/bin/activate
-                pip install -r requirements.txt
-                '''
+                sh 'docker run -d -p 8000:8000 --name $CONTAINER_NAME $IMAGE_NAME'
             }
         }
 
-        stage('Train Model') {
-            steps {
-                sh '''
-                . .venv/bin/activate
-                python train.py
-                '''
-            }
-        }
-
-        stage('Read Accuracy') {
+        stage('Wait for API Readiness') {
             steps {
                 script {
-                    env.CURRENT_ACCURACY = sh(
-                        script: "jq .accuracy artifacts/metrics.json",
-                        returnStdout: true
-                    ).trim()
-                }
-            }
-        }
-
-        stage('Compare Accuracy') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'best-accuracy', variable: 'BEST')]) {
-                        if (env.CURRENT_ACCURACY.toFloat() > BEST.toFloat()) {
-                            env.IS_BETTER = "1"
-                        } else {
-                            env.IS_BETTER = "0"
+                    timeout(time: 60, unit: 'SECONDS') {
+                        waitUntil {
+                            def status = sh(
+                                script: "curl -s http://localhost:8000/health",
+                                returnStatus: true
+                            )
+                            return (status == 0)
                         }
                     }
                 }
             }
         }
 
-        stage('Build Docker Image') {
-            when {
-                expression { env.IS_BETTER == "1" }
-            }
+        stage('Test Valid Request') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
-                                usernameVariable: 'USER',
-                                passwordVariable: 'PASS')]) {
-                    sh '''
-                    echo $PASS | docker login -u $USER --password-stdin
-                    docker build -t $DOCKER_IMAGE:${BUILD_NUMBER} .
-                    docker tag $DOCKER_IMAGE:${BUILD_NUMBER} $DOCKER_IMAGE:latest
-                    '''
+                script {
+                    def response = sh(
+                        script: "curl -s -X POST http://localhost:8000/predict -H 'Content-Type: application/json' -d @valid.json",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Valid Response: ${response}"
+
+                    if (!response.contains("wine_quality")) {
+                        error("Valid request failed — wine_quality missing")
+                    }
                 }
             }
         }
 
-        stage('Push Docker Image') {
-            when {
-                expression { env.IS_BETTER == "1" }
-            }
+        stage('Test Invalid Request') {
             steps {
-                sh '''
-                docker push $DOCKER_IMAGE:${BUILD_NUMBER}
-                docker push $DOCKER_IMAGE:latest
-                '''
+                script {
+                    def response = sh(
+                        script: "curl -s -X POST http://localhost:8000/predict -H 'Content-Type: application/json' -d @invalid.json",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Invalid Response: ${response}"
+
+                    if (!response.contains("error")) {
+                        error("Invalid request did not return error")
+                    }
+                }
+            }
+        }
+
+        stage('Stop Container') {
+            steps {
+                sh 'docker stop $CONTAINER_NAME || true'
+                sh 'docker rm $CONTAINER_NAME || true'
             }
         }
     }
 
     post {
-        always {
-            archiveArtifacts artifacts: 'artifacts/**', fingerprint: true
+        success {
+            echo "PIPELINE PASSED"
+        }
+        failure {
+            echo "PIPELINE FAILED"
         }
     }
 }
