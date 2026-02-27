@@ -47,36 +47,43 @@ pipeline {
             steps {
                 script {
                     def response = sh(
-                        script: "curl -s -X POST http://localhost:8000/predict -H 'Content-Type: application/json' -d @valid.json",
-                        returnStdout: true
-                    ).trim()
+                        script: '''
+                        curl -s -X POST http://lab7_test_container:8000/predict \
+                        -H "Content-Type: application/json" \
+                        -d @valid.json
+                        ''',
+                returnStdout: true
+                ).trim()
 
-                    echo "Valid Response: ${response}"
+            echo "Valid Response: ${response}"
 
-                    if (!response.contains("wine_quality")) {
-                        error("Valid request failed — wine_quality missing")
-                    }
-                }
+            if (!response.contains("wine_quality")) {
+                error("Valid request failed — wine_quality missing")
             }
         }
+    }
+}
 
         stage('Test Invalid Request') {
-            steps {
-                script {
-                    def response = sh(
-                        script: "curl -s -X POST http://localhost:8000/predict -H 'Content-Type: application/json' -d @invalid.json",
-                        returnStdout: true
-                    ).trim()
+    steps {
+        script {
+            def response = sh(
+                script: '''
+                curl -s -X POST http://lab7_test_container:8000/predict \
+                -H "Content-Type: application/json" \
+                -d @invalid.json
+                ''',
+                returnStdout: true
+            ).trim()
 
-                    echo "Invalid Response: ${response}"
+            echo "Invalid Response: ${response}"
 
-                    if (!response.contains("error")) {
-                        error("Invalid request did not return error")
-                    }
-                }
+            if (!response.contains("error")) {
+                error("Invalid request did not return error")
             }
         }
-
+    }
+}
         stage('Stop Container') {
             steps {
                 sh 'docker stop $CONTAINER_NAME || true'
