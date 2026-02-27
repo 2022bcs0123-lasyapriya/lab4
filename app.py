@@ -14,6 +14,10 @@ FEATURE_ORDER = [
     "pH", "sulphates", "alcohol"
 ]
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/predict")
 def predict(data: dict):
     try:
