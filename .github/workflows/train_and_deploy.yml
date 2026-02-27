@@ -72,6 +72,6 @@ jobs:
 
     - name: Update BEST_F1
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_PAT }}
       run: |
-        gh variable set BEST_F1 --body "$F1" --repo ${{ github.repository }}
+        gh variable set BEST_F1 --body "$F1" --repo 2022bcs0123-lasyapriya/lab4
