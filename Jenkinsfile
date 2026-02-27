@@ -17,9 +17,10 @@ pipeline {
         stage('Run Container') {
             steps {
                 sh '''
+                docker network create lab7_network || true
                 docker rm -f lab7_test_container || true
                 docker run -d \
-                --network host \
+                --network lab7_network \
                 --name lab7_test_container \
                 lasyabagadi/lab4-app:latest
                 '''
