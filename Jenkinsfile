@@ -16,7 +16,13 @@ pipeline {
 
         stage('Run Container') {
             steps {
-                sh 'docker run -d -p 8000:8000 --name $CONTAINER_NAME $IMAGE_NAME'
+                sh '''
+                docker rm -f lab7_test_container || true
+                docker run -d \
+                --network host \
+                --name lab7_test_container \
+                lasyabagadi/lab4-app:latest
+                '''
             }
         }
 
